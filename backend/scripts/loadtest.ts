@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { prisma } from "../src/db/client.js";
 import { scheduleEmails } from "../src/services/schedulerService.js";
+import { listSendersForUser } from "../src/services/senderService.js";
 import { redis } from "../src/redis/client.js";
 
 // Schedules a burst of emails all due immediately, against a deliberately low hourly
@@ -13,8 +14,9 @@ const [count = "12", hourlyLimit = "5", delaySeconds = "1", user = "load-test-us
   process.argv.slice(2);
 
 async function main() {
-  const sender = await prisma.sender.findFirst();
-  if (!sender) throw new Error("no sender — run `npm run prisma:seed` first");
+  // Provisions this user's mailboxes on first run, so no separate seed step is needed.
+  const senders = await listSendersForUser(user);
+  const sender = senders[0];
 
   const recipients = Array.from({ length: Number(count) }, (_, i) => `load-test-${i + 1}@example.com`);
 

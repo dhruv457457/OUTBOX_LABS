@@ -28,7 +28,6 @@ cp .env.example .env       # fill in DATABASE_URL/DIRECT_URL (Supabase), SUPABAS
                             # ETHEREAL_USER/PASS (generate at https://ethereal.email), etc.
 npm install
 npm run prisma:push        # creates the tables in their own `scheduler` schema
-npm run prisma:seed        # adds a sender to send from
 npm run dev                # API on :4000
 ```
 
@@ -103,6 +102,13 @@ Two independent checks prevent double-sends:
   scheduled at once behaves — every job still gets a cheap delayed slot in Redis, and
   the rate limiter naturally spreads the actual sends out over time instead of erroring.
 
+### Senders and tenancy
+
+Every account is provisioned its own set of mailboxes (`DEFAULT_SENDERS`) the first time
+the dashboard asks for them, and a schedule request resolves the sender by id *and*
+owner — so one account can neither read another's emails nor send from their address.
+Rate limits are keyed per sender, which is what makes having several of them useful.
+
 ### Auth
 
 The frontend signs in through Supabase's Google provider and sends the resulting session
@@ -122,10 +128,14 @@ body, formatting and attachments included.
 To watch the rate limiter under load, schedule a burst against a deliberately low limit:
 
 ```bash
-npm run loadtest -- 30 2 1     # 30 emails, 2 per hour, 1s between sends
+npm run loadtest -- 1000 50 0  # 1000 emails against a 50/hour limit
 npm run status                 # status counts, next send times, Redis counters
 npm run loadtest:clear         # remove the test rows again
+npm run reset                  # clear everything, including the queue
 ```
+
+Running that 1000-email burst gives exactly 50 sent, 950 left `SCHEDULED` with their
+next attempt moved to the following hour, and nothing in `FAILED`.
 
 `npm run status` prints the Redis hour-bucket counters directly, which is the clearest
 way to show the limit being enforced: the bucket stops at the configured maximum and the
@@ -162,11 +172,18 @@ limit. Toasts cover success and error paths throughout.
   active state reliably — `queryCommandState("justifyLeft")` returns `true` even when
   nothing is aligned, so the button was permanently highlighted. Tiptap tracks real
   document state, so every toolbar button lights up only when it actually applies.
-- Attachments are stored base64 on the row, which is fine at this scale but would move
-  to object storage (S3/Supabase Storage) with a reference on the row in production.
+- Attachments are stored base64 on the row. That is fine at this scale and keeps the
+  setup to two services, but it inflates the database and would move to object storage
+  (S3 or Supabase Storage) with only a reference on the row in production.
+- The dashboard polls every 10 seconds rather than holding a connection open. It pauses
+  on hidden tabs, which is enough for one operator; server-sent events would be the
+  right answer for many concurrent users.
 - Starring a row is local UI state only — there's no `starred` column, since the
   requirements don't ask for it.
 - The optional "open a full email thread" view from the Figma file wasn't built — it's
   not part of the written requirements, and the two required tables were prioritized.
+- The API is rate limited per IP (`RATE_LIMIT_PER_MINUTE`) so a valid token isn't a
+  licence to hammer it, and attachment sizes are capped server-side rather than trusting
+  the browser's check.
 - Local dev uses Docker Redis; a hosted Redis (e.g. Upstash) would be a one-line
   `REDIS_URL` change for a real deployment.

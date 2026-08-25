@@ -11,11 +11,16 @@ datasource db {
 
 model Sender {
   id        String           @id @default(uuid())
-  email     String           @unique
+  // Owning account — mailboxes belong to a user, so nobody can send "from" an
+  // address that isn't theirs.
+  userId    String
+  email     String
   name      String?
   createdAt DateTime         @default(now())
   emails    ScheduledEmail[]
 
+  @@unique([userId, email])
+  @@index([userId])
   @@schema("scheduler")
 }
 

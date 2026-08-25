@@ -3,8 +3,11 @@ import { z } from "zod";
 import { scheduleEmails } from "../services/schedulerService.js";
 import { listScheduled, listSent } from "../services/emailService.js";
 import type { AuthedRequest } from "../auth/middleware.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const emailsRouter = Router();
+
+const MAX_ATTACHMENT_BASE64 = Math.ceil((5 * 1024 * 1024 * 4) / 3);
 
 const scheduleSchema = z.object({
   senderId: z.string().uuid(),
@@ -15,7 +18,15 @@ const scheduleSchema = z.object({
   minDelayMs: z.number().int().nonnegative().optional(),
   hourlyLimit: z.number().int().positive().optional(),
   attachments: z
-    .array(z.object({ filename: z.string(), contentType: z.string(), content: z.string() }))
+    .array(
+      z.object({
+        filename: z.string().min(1).max(255),
+        contentType: z.string().min(1).max(128),
+        // base64 encodes 3 bytes as 4 chars, so this caps each file at ~5MB. The client
+        // checks too, but the client isn't the one we trust.
+        content: z.string().max(MAX_ATTACHMENT_BASE64),
+      }),
+    )
     .max(5)
     .optional(),
 });
@@ -32,23 +43,32 @@ function pagination(req: AuthedRequest) {
   return { page, pageSize };
 }
 
-emailsRouter.post("/schedule", async (req: AuthedRequest, res) => {
-  const parsed = scheduleSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
-    return;
-  }
+emailsRouter.post(
+  "/schedule",
+  asyncHandler<AuthedRequest>(async (req, res) => {
+    const parsed = scheduleSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
 
-  const rows = await scheduleEmails({ ...parsed.data, userId: userId(req) });
-  res.status(201).json({ scheduled: rows.length, batchId: rows[0]?.batchId ?? null });
-});
+    const rows = await scheduleEmails({ ...parsed.data, userId: userId(req) });
+    res.status(201).json({ scheduled: rows.length, batchId: rows[0]?.batchId ?? null });
+  }),
+);
 
-emailsRouter.get("/scheduled", async (req: AuthedRequest, res) => {
-  const { page, pageSize } = pagination(req);
-  res.json(await listScheduled(userId(req), page, pageSize));
-});
+emailsRouter.get(
+  "/scheduled",
+  asyncHandler<AuthedRequest>(async (req, res) => {
+    const { page, pageSize } = pagination(req);
+    res.json(await listScheduled(userId(req), page, pageSize));
+  }),
+);
 
-emailsRouter.get("/sent", async (req: AuthedRequest, res) => {
-  const { page, pageSize } = pagination(req);
-  res.json(await listSent(userId(req), page, pageSize));
-});
+emailsRouter.get(
+  "/sent",
+  asyncHandler<AuthedRequest>(async (req, res) => {
+    const { page, pageSize } = pagination(req);
+    res.json(await listSent(userId(req), page, pageSize));
+  }),
+);

@@ -11,6 +11,12 @@ const schema = z.object({
   DEFAULT_HOURLY_LIMIT: z.coerce.number().int().positive().default(200),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // Mailboxes provisioned for each new account, as "email|Display Name" entries.
+  DEFAULT_SENDERS: z
+    .string()
+    .default("outreach@outbox-demo.dev|Outreach,sales@outbox-demo.dev|Sales,hello@outbox-demo.dev|Hello"),
+  // Requests per minute per IP against the API.
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
 });
 
 export const env = schema.parse(process.env);

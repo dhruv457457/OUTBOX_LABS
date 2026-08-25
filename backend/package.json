@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
+    "reset": "tsx scripts/reset.ts",
     "loadtest": "tsx scripts/loadtest.ts",
     "loadtest:clear": "tsx scripts/clear-loadtest.ts",
     "status": "tsx scripts/status.ts"
@@ -22,6 +23,7 @@
     "csv-parse": "^5.6.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.6.2",
     "ioredis": "^5.4.2",
     "jose": "^5.9.6",
     "multer": "^2.0.1",

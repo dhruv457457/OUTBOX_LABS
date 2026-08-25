@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/client.js";
 import { scheduleEmailJob } from "../queue/emailQueue.js";
 import { env } from "../config/env.js";
+import { findOwnedSender } from "./senderService.js";
 import type { EmailAttachment } from "../mailer/etherealTransport.js";
 
 interface ScheduleInput {
@@ -18,7 +19,8 @@ interface ScheduleInput {
 }
 
 export async function scheduleEmails(input: ScheduleInput) {
-  const sender = await prisma.sender.findUnique({ where: { id: input.senderId } });
+  // Looked up by owner as well as id, so a caller can't send from someone else's mailbox.
+  const sender = await findOwnedSender(input.userId, input.senderId);
   if (!sender) throw new Error("unknown sender");
 
   const minDelayMs = input.minDelayMs ?? env.DEFAULT_MIN_DELAY_MS;
