@@ -11,7 +11,7 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
-    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:push": "npm run prisma:push --workspace=backend",
     "prisma:generate": "npm run prisma:generate --workspace=backend"
   }
 }

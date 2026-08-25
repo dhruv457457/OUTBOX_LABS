@@ -9,7 +9,11 @@
     "start": "node dist/index.js",
     "start:worker": "node dist/worker.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:push": "prisma db push",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "loadtest": "tsx scripts/loadtest.ts",
+    "loadtest:clear": "tsx scripts/clear-loadtest.ts",
+    "status": "tsx scripts/status.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.0",
@@ -19,7 +23,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
-    "jsonwebtoken": "^9.0.2",
+    "jose": "^5.9.6",
     "multer": "^2.0.1",
     "nodemailer": "^9.0.5",
     "zod": "^3.24.1"
@@ -27,7 +31,6 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.5",
     "@types/nodemailer": "^6.4.17",

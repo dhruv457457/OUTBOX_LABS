@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Don't generate AGENTS.md / CLAUDE.md scaffolding files in the repo.
+  agentRules: false,
 };
 
 export default nextConfig;
