@@ -26,6 +26,11 @@ export async function tryClaimHourlySlot(senderId: string, hourlyLimit: number) 
   return true;
 }
 
+/** Gives a claimed slot back when the send doesn't end up happening this hour. */
+export async function releaseHourlySlot(senderId: string) {
+  await redis.decr(hourBucketKey(senderId, new Date()));
+}
+
 /** Atomically claims the "last sent" slot for a sender if minDelayMs has elapsed since
  *  their last send. Returns false if it's too soon. */
 export async function tryClaimMinDelay(senderId: string, minDelayMs: number) {
