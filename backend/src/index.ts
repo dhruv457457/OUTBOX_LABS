@@ -8,7 +8,8 @@ import { sendersRouter } from "./routes/senders.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 
 const app = express();
-app.use(cors());
+// Only the dashboard should be able to call this API from a browser.
+app.use(cors({ origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()) }));
 app.use(express.json({ limit: "10mb" })); // headroom for base64-encoded attachments
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

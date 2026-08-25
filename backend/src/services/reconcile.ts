@@ -3,6 +3,9 @@ import { emailQueue, scheduleEmailJob } from "../queue/emailQueue.js";
 
 const GRACE_MS = 2 * 60 * 1000;
 const STUCK_PROCESSING_MS = 10 * 60 * 1000;
+// Bounded so a large backlog can't pull the whole table into memory; the sweep runs
+// often enough to work through one in batches.
+const BATCH_SIZE = 200;
 
 /** Safety net for restart survival: catches rows whose BullMQ job went missing (e.g. an
  *  enqueue call failed after the DB write) or got stuck mid-send when a worker died in a
@@ -18,6 +21,8 @@ export async function reconcileScheduledEmails() {
       ],
     },
     include: { sender: true },
+    orderBy: { scheduledFor: "asc" },
+    take: BATCH_SIZE,
   });
 
   for (const row of stuck) {

@@ -10,6 +10,7 @@ const schema = z.object({
   DEFAULT_MIN_DELAY_MS: z.coerce.number().int().nonnegative().default(2000),
   DEFAULT_HOURLY_LIMIT: z.coerce.number().int().positive().default(200),
   PORT: z.coerce.number().int().positive().default(4000),
+  CORS_ORIGIN: z.string().default("http://localhost:3000"),
 });
 
 export const env = schema.parse(process.env);

@@ -5,10 +5,12 @@ import { redis } from "../src/redis/client.js";
 
 // Schedules a burst of emails all due immediately, against a deliberately low hourly
 // limit, so you can watch the limiter spread them out instead of dropping them.
-//   npm run loadtest -- 12 5 1 <userId>
+//   npm run loadtest -- 12 5 1 <userId> <startInSeconds>
 // Pass the Supabase user id to have the rows show up in that account's dashboard;
-// otherwise they're owned by a stand-in id and stay out of everyone's way.
-const [count = "12", hourlyLimit = "5", delaySeconds = "1", user = "load-test-user"] = process.argv.slice(2);
+// otherwise they're owned by a stand-in id and stay out of everyone's way. The last
+// argument schedules the batch into the future, which is what the restart test needs.
+const [count = "12", hourlyLimit = "5", delaySeconds = "1", user = "load-test-user", startIn = "0"] =
+  process.argv.slice(2);
 
 async function main() {
   const sender = await prisma.sender.findFirst();
@@ -22,7 +24,7 @@ async function main() {
     recipients,
     subject: `Load test — limit ${hourlyLimit}/hr`,
     bodyHtml: "<p>Load test message.</p>",
-    scheduledFor: new Date(),
+    scheduledFor: new Date(Date.now() + Number(startIn) * 1000),
     minDelayMs: Number(delaySeconds) * 1000,
     hourlyLimit: Number(hourlyLimit),
   });
