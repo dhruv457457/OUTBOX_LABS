@@ -8,8 +8,8 @@ queue (no cron), and manage everything from a Next.js dashboard.
 
 - **Backend**: Express + TypeScript, BullMQ (Redis-backed queue), Prisma → PostgreSQL
   (Supabase), Ethereal for fake SMTP.
-- **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind CSS v4, Supabase Auth
-  (Google OAuth) for login.
+- **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS v4, Supabase Auth
+  (Google OAuth) for login, Tiptap for the rich-text composer.
 - **Infra**: Redis via Docker for local dev.
 
 ## Running it locally
@@ -24,12 +24,17 @@ docker compose up -d redis
 
 ```bash
 cd backend
-cp .env.example .env       # fill in DATABASE_URL/DIRECT_URL (Supabase), SUPABASE_JWT_SECRET,
+cp .env.example .env       # fill in DATABASE_URL/DIRECT_URL (Supabase), SUPABASE_URL,
                             # ETHEREAL_USER/PASS (generate at https://ethereal.email), etc.
 npm install
-npx prisma migrate dev
+npm run prisma:push        # creates the tables in their own `scheduler` schema
+npm run prisma:seed        # adds a sender to send from
 npm run dev                # API on :4000
 ```
+
+The tables live in a dedicated `scheduler` Postgres schema rather than `public`, so the
+app can share a Supabase project with something else without either one touching the
+other's tables.
 
 In a second terminal, start the queue worker as its own process (this is what makes
 restart-survival possible — kill/restart the worker independently of the API):
@@ -37,16 +42,6 @@ restart-survival possible — kill/restart the worker independently of the API):
 ```bash
 npm run dev:worker
 ```
-
-Add at least one sender before scheduling anything:
-
-```bash
-curl -X POST http://localhost:4000/api/senders -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","name":"You"}'
-```
-
-(This one call doesn't need auth in dev, but every other `/api/*` route does — see
-Auth below.)
 
 ### 3. Frontend
 
@@ -108,27 +103,70 @@ Two independent checks prevent double-sends:
   scheduled at once behaves — every job still gets a cheap delayed slot in Redis, and
   the rate limiter naturally spreads the actual sends out over time instead of erroring.
 
+### Auth
+
+The frontend signs in through Supabase's Google provider and sends the resulting session
+JWT as a bearer token on every API call. The backend verifies it against the Supabase
+project's public JWKS endpoint (`/auth/v1/.well-known/jwks.json`) rather than a shared
+secret — newer Supabase projects sign with rotatable ES256 keys, so there's no symmetric
+secret to distribute, and key rotation is handled for us. Every `/api/*` route except
+the health check goes through that middleware.
+
+## Seeing it work
+
+Every send goes through Ethereal, which captures the message and returns a preview link
+instead of delivering to a real inbox. That link is stored on the row and surfaced as a
+**View email** button in the Sent tab, so you can open the actual rendered message —
+body, formatting and attachments included.
+
+To watch the rate limiter under load, schedule a burst against a deliberately low limit:
+
+```bash
+npm run loadtest -- 30 2 1     # 30 emails, 2 per hour, 1s between sends
+npm run status                 # status counts, next send times, Redis counters
+npm run loadtest:clear         # remove the test rows again
+```
+
+`npm run status` prints the Redis hour-bucket counters directly, which is the clearest
+way to show the limit being enforced: the bucket stops at the configured maximum and the
+remaining emails sit in `SCHEDULED` with their next attempt moved to the following hour
+— none of them fail or disappear.
+
 ## Features implemented
 
-**Backend**: schedule API (single + CSV batch), scheduled/sent listing with pagination,
-BullMQ delayed-job scheduling, worker concurrency, per-sender min-delay and hourly rate
-limiting (Redis-backed, configurable via env, never drops jobs), idempotent job
-processing, restart-persistence via BullMQ + a reconciliation sweep, Supabase JWT auth
-middleware, CSV/txt recipient list upload and parsing.
+**Backend**: schedule API (single + CSV batch), paginated scheduled/sent listings,
+BullMQ delayed-job scheduling, configurable worker concurrency, per-sender min-delay and
+hourly rate limiting (Redis-backed, env-configurable, never drops jobs), two-layer
+idempotency, restart-persistence via BullMQ plus a reconciliation sweep, Supabase JWT
+auth middleware, CSV/txt recipient parsing, attachment support, and stored Ethereal
+preview links.
 
-**Frontend**: Google OAuth login via Supabase Auth, dashboard with Scheduled/Sent tabs
-(loading + empty states, search), Compose panel (sender selection, recipient chips +
-CSV upload, subject, rich-text body, configurable delay/hourly-limit, Send Later date
-picker with quick-picks), toast notifications.
+**Frontend**: Google OAuth via Supabase Auth, dashboard with Scheduled/Sent tabs showing
+recipient, subject, timestamp and status, with loading / empty / error states, search,
+status filtering and "load more" pagination; lists poll every 10s so emails visibly move
+from Scheduled to Sent. Compose is a Gmail-style modal (expandable to full screen) with
+sender selection, recipient chips, CSV upload with a parsed count, rich-text body,
+attachments with thumbnails, a date/time picker, and configurable delay and hourly
+limit. Toasts cover success and error paths throughout.
 
 ## Assumptions & trade-offs
 
+- **User info sits in the sidebar, not a top header.** The written brief says "top
+  header" but the Figma places name, email and avatar in the left sidebar, and the same
+  brief says to follow the Figma closely. All four required elements (name, email,
+  avatar, logout) are present — the Figma's placement won.
 - Email/password login is wired via Supabase Auth but is a secondary path — Google
   OAuth is the required "real" auth flow per the assignment.
-- The rich-text editor is a lightweight `contentEditable` + toolbar rather than a full
-  editor library, to keep the bundle and build time small.
+- The rich-text editor is Tiptap (ProseMirror). It started as a `contentEditable` +
+  `document.execCommand` toolbar, but `execCommand` is deprecated and can't report
+  active state reliably — `queryCommandState("justifyLeft")` returns `true` even when
+  nothing is aligned, so the button was permanently highlighted. Tiptap tracks real
+  document state, so every toolbar button lights up only when it actually applies.
+- Attachments are stored base64 on the row, which is fine at this scale but would move
+  to object storage (S3/Supabase Storage) with a reference on the row in production.
+- Starring a row is local UI state only — there's no `starred` column, since the
+  requirements don't ask for it.
 - The optional "open a full email thread" view from the Figma file wasn't built — it's
-  not part of the written requirements, and the two required tables (Scheduled/Sent)
-  were prioritized instead.
+  not part of the written requirements, and the two required tables were prioritized.
 - Local dev uses Docker Redis; a hosted Redis (e.g. Upstash) would be a one-line
   `REDIS_URL` change for a real deployment.
