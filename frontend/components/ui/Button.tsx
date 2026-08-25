@@ -3,7 +3,7 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 const variants = {
   primary: "bg-primary text-white hover:bg-primary-hover",
   outline: "border border-primary text-primary hover:bg-primary-soft",
-  ghost: "text-muted hover:bg-black/5 dark:hover:bg-white/5",
+  ghost: "text-muted hover:bg-black/5",
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -30,10 +30,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`animate-slide-in-right rounded-lg px-4 py-3 text-sm text-white shadow-lg ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm text-white shadow-lg animate-slide-in-right ${
               t.tone === "error" ? "bg-danger" : "bg-primary"
             }`}
           >
+            {t.tone === "error" ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 8v5M12 16h.01" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <path d="m5 13 4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
             {t.message}
           </div>
         ))}
