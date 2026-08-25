@@ -6,6 +6,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["scheduler"]
 }
 
 model Sender {
@@ -14,10 +15,15 @@ model Sender {
   name      String?
   createdAt DateTime         @default(now())
   emails    ScheduledEmail[]
+
+  @@schema("scheduler")
 }
 
 model ScheduledEmail {
   id           String      @id @default(uuid())
+  // Supabase auth user id (JWT `sub`) — every query is scoped to this so one account
+  // can never see another's emails.
+  userId       String
   senderId     String
   sender       Sender      @relation(fields: [senderId], references: [id])
   recipient    String
@@ -28,15 +34,19 @@ model ScheduledEmail {
   hourlyLimit  Int
   status       EmailStatus @default(SCHEDULED)
   batchId      String?
+  attachments  Json?
   attempt      Int         @default(0)
   lastError    String?
   sentAt       DateTime?
+  previewUrl   String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  @@index([userId, status, scheduledFor])
   @@index([status, scheduledFor])
   @@index([senderId, status])
   @@index([batchId])
+  @@schema("scheduler")
 }
 
 enum EmailStatus {
@@ -44,4 +54,6 @@ enum EmailStatus {
   PROCESSING
   SENT
   FAILED
+
+  @@schema("scheduler")
 }
