@@ -1,8 +1,11 @@
 import { prisma } from "../db/client.js";
 import type { EmailStatus, Prisma } from "@prisma/client";
 
-export async function listScheduled(page: number, pageSize: number) {
-  const where: Prisma.ScheduledEmailWhereInput = { status: { in: ["SCHEDULED", "PROCESSING"] as EmailStatus[] } };
+export async function listScheduled(userId: string, page: number, pageSize: number) {
+  const where: Prisma.ScheduledEmailWhereInput = {
+    userId,
+    status: { in: ["SCHEDULED", "PROCESSING"] as EmailStatus[] },
+  };
   const [rows, total] = await Promise.all([
     prisma.scheduledEmail.findMany({
       where,
@@ -16,8 +19,11 @@ export async function listScheduled(page: number, pageSize: number) {
   return { rows, total };
 }
 
-export async function listSent(page: number, pageSize: number) {
-  const where: Prisma.ScheduledEmailWhereInput = { status: { in: ["SENT", "FAILED"] as EmailStatus[] } };
+export async function listSent(userId: string, page: number, pageSize: number) {
+  const where: Prisma.ScheduledEmailWhereInput = {
+    userId,
+    status: { in: ["SENT", "FAILED"] as EmailStatus[] },
+  };
   const [rows, total] = await Promise.all([
     prisma.scheduledEmail.findMany({
       where,

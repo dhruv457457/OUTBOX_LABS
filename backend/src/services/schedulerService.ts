@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/client.js";
 import { scheduleEmailJob } from "../queue/emailQueue.js";
 import { env } from "../config/env.js";
+import type { EmailAttachment } from "../mailer/etherealTransport.js";
 
 interface ScheduleInput {
+  userId: string;
   senderId: string;
   recipients: string[];
   subject: string;
@@ -11,6 +14,7 @@ interface ScheduleInput {
   scheduledFor: Date;
   minDelayMs?: number;
   hourlyLimit?: number;
+  attachments?: EmailAttachment[];
 }
 
 export async function scheduleEmails(input: ScheduleInput) {
@@ -25,6 +29,7 @@ export async function scheduleEmails(input: ScheduleInput) {
     input.recipients.map((recipient) =>
       prisma.scheduledEmail.create({
         data: {
+          userId: input.userId,
           senderId: sender.id,
           recipient,
           subject: input.subject,
@@ -33,6 +38,7 @@ export async function scheduleEmails(input: ScheduleInput) {
           minDelayMs,
           hourlyLimit,
           batchId,
+          attachments: (input.attachments as unknown as Prisma.InputJsonValue) ?? undefined,
         },
       }),
     ),
