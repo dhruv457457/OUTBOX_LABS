@@ -3,7 +3,7 @@ import { z } from "zod";
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
-  SUPABASE_JWT_SECRET: z.string().min(1),
+  SUPABASE_URL: z.string().url(),
   ETHEREAL_USER: z.string().min(1),
   ETHEREAL_PASS: z.string().min(1),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
