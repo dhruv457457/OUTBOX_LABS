@@ -14,7 +14,8 @@ export const transporter = nodemailer.createTransport({
 export interface EmailAttachment {
   filename: string;
   contentType: string;
-  content: string; // base64
+  url: string;
+  bytes: number;
 }
 
 export async function sendEmail(opts: {
@@ -26,10 +27,12 @@ export async function sendEmail(opts: {
 }) {
   const info = await transporter.sendMail({
     ...opts,
+    // nodemailer streams each file straight from storage, so the message body never
+    // carries the bytes around.
     attachments: opts.attachments?.map((a) => ({
       filename: a.filename,
       contentType: a.contentType,
-      content: Buffer.from(a.content, "base64"),
+      path: a.url,
     })),
   });
   return nodemailer.getTestMessageUrl(info); // Ethereal preview link, handy for the demo video
