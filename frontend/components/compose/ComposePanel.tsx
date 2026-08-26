@@ -160,11 +160,6 @@ export function ComposePanel({ onClose, expanded, onToggleExpand }: Props) {
           onNotice={toast}
         />
 
-        <p className="text-xs text-muted">
-          Use <code className="rounded bg-black/[0.06] px-1 py-0.5">{"{{firstName}}"}</code> anywhere in the
-          subject or body — it&apos;s replaced with each recipient&apos;s name as the email goes out.
-        </p>
-
         <AttachmentPreview value={attachments} onRemove={(i) => setAttachments(attachments.filter((_, j) => j !== i))} />
       </div>
 
