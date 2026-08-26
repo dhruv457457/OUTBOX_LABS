@@ -23,6 +23,11 @@ const schema = z.object({
   LLM_MODEL: z.string().default("openai/gpt-4o-mini"),
   // Optional — attachments are disabled when unset. The SDK reads this format directly.
   CLOUDINARY_URL: z.string().optional(),
+  // Run the queue worker inside the API process. Needed on hosts that only run one.
+  RUN_WORKER_IN_API: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 export const env = schema.parse(process.env);

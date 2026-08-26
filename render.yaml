@@ -1,0 +1,35 @@
+# Render blueprint. The free plan runs a single process per service, so the queue
+# worker runs inside the API via RUN_WORKER_IN_API rather than as its own service.
+services:
+  - type: web
+    name: outbox-scheduler-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: RUN_WORKER_IN_API
+        value: "true"
+      - key: NODE_VERSION
+        value: "20"
+      # Set the rest in the Render dashboard — see README "Deploying".
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: ETHEREAL_USER
+        sync: false
+      - key: ETHEREAL_PASS
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false

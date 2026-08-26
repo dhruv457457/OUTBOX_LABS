@@ -9,6 +9,7 @@ import { sendersRouter } from "./routes/senders.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { attachmentsRouter } from "./routes/attachments.routes.js";
+import { runWorker } from "./runWorker.js";
 
 const app = express();
 
@@ -42,3 +43,10 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 app.listen(env.PORT, () => {
   console.log(`api listening on :${env.PORT}`);
 });
+
+// Single-process hosts (Render's free tier among them) don't give you a separate
+// background worker, so the queue runs in here instead. Locally it stays its own
+// process, which is what makes the restart demo meaningful.
+if (env.RUN_WORKER_IN_API) {
+  runWorker();
+}

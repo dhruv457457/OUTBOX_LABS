@@ -55,6 +55,38 @@ npm run dev                        # http://localhost:3000
 Enable the Google provider under Supabase → Authentication → Providers, and add
 `http://localhost:3000/auth/callback` as an allowed redirect URL.
 
+## Deploying
+
+Four pieces: the dashboard on Vercel, the API on Render, Redis on Upstash, Postgres on
+Supabase (already hosted).
+
+**1. Redis** — create a free Upstash database and copy its `rediss://` URL.
+
+**2. API on Render** — the repo has a `render.yaml`, so "New → Blueprint" picks the
+service up. Set the secrets listed in `.env.production.example` in the dashboard, with
+`CORS_ORIGIN` pointing at the deployed dashboard.
+
+Render's free plan runs one process per service, so `RUN_WORKER_IN_API=true` starts the
+queue worker inside the API. Locally the worker stays a separate process, which is what
+makes killing it a meaningful restart test.
+
+**3. Dashboard on Vercel** — import the repo, set the root directory to `frontend`, and
+add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_API_URL`
+(the Render URL).
+
+**4. Point auth at the deployed URLs** — add `https://<app>.vercel.app/auth/callback` to
+Supabase → Authentication → URL Configuration, and keep the Supabase callback in the
+Google Cloud client's authorised redirect URIs.
+
+### A note on free tiers
+
+Render's free web services idle out after about 15 minutes and take a few seconds to
+wake. A sleeping process can't send an email at its scheduled moment, so on a cold start
+sends run late. Nothing is lost: the reconciliation sweep runs on boot, finds everything
+that came due while the process was down, and sends it immediately — the same mechanism
+that makes the restart test pass. A paid instance, or any always-on host, removes the
+delay entirely.
+
 ## Architecture
 
 ### Scheduling (no cron)
