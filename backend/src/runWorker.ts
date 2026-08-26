@@ -16,9 +16,14 @@ export function runWorker() {
   // A boot sweep matters most on hosts that idle the process out: anything that came
   // due while it was asleep is picked up as soon as it wakes, so nothing is lost — it
   // just goes out late.
-  const sweep = () => reconcileScheduledEmails().catch((err) => console.error("reconcile failed", err));
-  sweep();
-  const timer = setInterval(sweep, RECONCILE_INTERVAL_MS);
+  // The boot pass rebuilds the queue from the database, so a Redis that lost its data
+  // recovers immediately rather than one email at a time as each falls overdue.
+  reconcileScheduledEmails({ includeFuture: true }).catch((err) => console.error("boot reconcile failed", err));
+
+  const timer = setInterval(
+    () => reconcileScheduledEmails().catch((err) => console.error("reconcile failed", err)),
+    RECONCILE_INTERVAL_MS,
+  );
 
   return async function stop() {
     clearInterval(timer);

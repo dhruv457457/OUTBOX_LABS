@@ -80,6 +80,12 @@ Google Cloud client's authorised redirect URIs.
 
 ### A note on free tiers
 
+Render's free Key Value instance keeps data in memory only, so Redis can be emptied at
+any time — which on its own would wipe every pending job. It doesn't, because Postgres
+is the source of truth and the worker rebuilds the queue from it on boot. Wiping Redis
+with emails still due two minutes out and restarting the worker re-queues them and they
+go out within a few seconds of their original time, rather than early or not at all.
+
 Render's free web services idle out after about 15 minutes and take a few seconds to
 wake. A sleeping process can't send an email at its scheduled moment, so on a cold start
 sends run late. Nothing is lost: the reconciliation sweep runs on boot, finds everything
@@ -104,10 +110,12 @@ nothing falls through the cracks:
 
 - **BullMQ's stalled-job recovery** (`stalledInterval`/`maxStalledCount`) retries a job
   automatically if the worker holding its lock dies mid-processing.
-- **A reconciliation sweep** (`backend/src/services/reconcile.ts`) runs on worker boot
-  and every 5 minutes: it finds `SCHEDULED` rows past their time with no matching
-  Redis job (e.g. the original `queue.add()` call failed after the DB write committed)
-  or `PROCESSING` rows stuck for too long, and re-enqueues them.
+- **A reconciliation sweep** (`backend/src/services/reconcile.ts`) re-queues anything
+  the database still expects to send but Redis has no job for. The five-minute pass
+  looks only at overdue emails, which is cheap and covers an enqueue that failed after
+  the row was committed, or a worker that died mid-send. The boot pass also takes in
+  future emails, so a Redis that lost its data is rebuilt from Postgres immediately
+  rather than one email at a time as each falls overdue.
 
 ### Idempotency
 
