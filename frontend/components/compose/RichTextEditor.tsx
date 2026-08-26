@@ -5,7 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import { Placeholder } from "@tiptap/extensions";
-import { ColorPicker, FontSizeSelect, LinkButton, ToolbarButton } from "./EditorToolbar";
+import { ColorPicker, FontSizeSelect, ImproveButton, LinkButton, ToolbarButton } from "./EditorToolbar";
 
 interface Item {
   /** Name passed to editor.isActive(), plus attrs where the mark needs them. */
@@ -46,7 +46,15 @@ const groups: Item[][] = [
   ],
 ];
 
-export function RichTextEditor({ onChange }: { onChange: (html: string) => void }) {
+interface Props {
+  onChange: (html: string) => void;
+  /** Passed through to the assistant so it can improve the subject line too. */
+  subject?: string;
+  onSubjectChange?: (subject: string) => void;
+  onNotice?: (message: string, tone?: "success" | "error") => void;
+}
+
+export function RichTextEditor({ onChange, subject, onSubjectChange, onNotice }: Props) {
   const editor = useEditor({
     immediatelyRender: false, // avoids an SSR hydration mismatch in the app router
     extensions: [
@@ -80,11 +88,22 @@ export function RichTextEditor({ onChange }: { onChange: (html: string) => void 
           </div>
         ))}
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 border-r border-border pr-1">
           <FontSizeSelect editor={editor} />
           <ColorPicker editor={editor} />
           <LinkButton editor={editor} />
         </div>
+
+        <ImproveButton
+          editor={editor}
+          subject={subject}
+          onSubjectChange={onSubjectChange}
+          onError={(message) => onNotice?.(message, "error")}
+          onDone={() => {
+            onChange(editor.getHTML());
+            onNotice?.("Draft polished — undo with Ctrl+Z if you prefer the original.");
+          }}
+        />
       </div>
       <EditorContent editor={editor} />
     </div>

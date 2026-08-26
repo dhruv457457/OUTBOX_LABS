@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
+import { apiPost } from "@/lib/apiClient";
+import type { ImproveDraftResponse } from "@/lib/types";
 
 export function ToolbarButton({
   icon,
@@ -192,5 +194,73 @@ export function LinkButton({ editor }: { editor: Editor }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Sends the current draft to the assistant and swaps in the polished version.
+ *  The replacement goes through the editor's history, so Ctrl+Z undoes it. */
+export function ImproveButton({
+  editor,
+  subject,
+  onSubjectChange,
+  onError,
+  onDone,
+}: {
+  editor: Editor;
+  subject?: string;
+  onSubjectChange?: (s: string) => void;
+  onError: (message: string) => void;
+  onDone?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function improve() {
+    if (editor.isEmpty) {
+      onError("Write a rough draft first, then let the assistant tidy it up.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const result = await apiPost<ImproveDraftResponse>("/api/ai/improve", {
+        subject,
+        bodyHtml: editor.getHTML(),
+      });
+      editor.chain().focus().setContent(result.bodyHtml).run();
+      if (result.subject && !subject?.trim()) onSubjectChange?.(result.subject);
+      onDone?.();
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={improve}
+      disabled={busy}
+      title="Improve this draft"
+      aria-label="Improve this draft"
+      className="flex h-7 items-center gap-1 rounded px-1.5 text-primary transition-colors hover:bg-primary-soft disabled:opacity-50"
+    >
+      {busy ? (
+        <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+          <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path
+            d="M5 3v4M3 5h4M6 17v4m-2-2h4M13 3l2.3 5.7L21 11l-5.7 2.3L13 19l-2.3-5.7L5 11l5.7-2.3L13 3Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      <span className="text-xs font-medium">{busy ? "Polishing" : "Improve"}</span>
+    </button>
   );
 }
