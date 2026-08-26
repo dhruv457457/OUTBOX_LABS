@@ -35,3 +35,11 @@ export async function apiUpload<T>(path: string, file: File): Promise<T> {
   form.append("file", file);
   return apiFetch<T>(path, { method: "POST", body: form });
 }
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}

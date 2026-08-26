@@ -36,3 +36,7 @@ export async function listSent(userId: string, page: number, pageSize: number) {
   ]);
   return { rows, total };
 }
+
+export function setStarred(userId: string, id: string, starred: boolean) {
+  return prisma.scheduledEmail.updateMany({ where: { id, userId }, data: { starred } });
+}

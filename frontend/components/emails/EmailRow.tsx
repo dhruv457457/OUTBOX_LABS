@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TimePill, StatusPill } from "@/components/ui/Pill";
+import { apiPatch } from "@/lib/apiClient";
 import type { ScheduledEmailRow } from "@/lib/types";
 
 // The body comes from a contentEditable, so it's full of tags and entities like &nbsp;
@@ -14,7 +15,17 @@ function toPlainText(html: string) {
 }
 
 export function EmailRow({ email, showTime }: { email: ScheduledEmailRow; showTime: boolean }) {
-  const [starred, setStarred] = useState(false);
+  const [starred, setStarred] = useState(email.starred);
+
+  async function toggleStar() {
+    const next = !starred;
+    setStarred(next); // optimistic — the row flips immediately, reverts if the call fails
+    try {
+      await apiPatch(`/api/emails/${email.id}/star`, { starred: next });
+    } catch {
+      setStarred(!next);
+    }
+  }
   const preview = toPlainText(email.bodyHtml).slice(0, 70);
 
   // Scheduled rows count down to their send time; sent rows report when they went out.
@@ -49,7 +60,7 @@ export function EmailRow({ email, showTime }: { email: ScheduledEmailRow; showTi
       )}
 
       <button
-        onClick={() => setStarred((v) => !v)}
+        onClick={toggleStar}
         className={`shrink-0 transition-opacity ${starred ? "text-accent-orange opacity-100" : "text-muted opacity-0 hover:text-accent-orange group-hover:opacity-100"}`}
         aria-label={starred ? "unstar" : "star"}
       >

@@ -1,13 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { scheduleEmails } from "../services/schedulerService.js";
-import { listScheduled, listSent } from "../services/emailService.js";
+import { listScheduled, listSent, setStarred } from "../services/emailService.js";
 import type { AuthedRequest } from "../auth/middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const emailsRouter = Router();
-
-const MAX_ATTACHMENT_BASE64 = Math.ceil((5 * 1024 * 1024 * 4) / 3);
 
 const scheduleSchema = z.object({
   senderId: z.string().uuid(),
@@ -22,9 +20,8 @@ const scheduleSchema = z.object({
       z.object({
         filename: z.string().min(1).max(255),
         contentType: z.string().min(1).max(128),
-        // base64 encodes 3 bytes as 4 chars, so this caps each file at ~5MB. The client
-        // checks too, but the client isn't the one we trust.
-        content: z.string().max(MAX_ATTACHMENT_BASE64),
+        url: z.string().url(),
+        bytes: z.number().int().nonnegative(),
       }),
     )
     .max(5)
@@ -70,5 +67,26 @@ emailsRouter.get(
   asyncHandler<AuthedRequest>(async (req, res) => {
     const { page, pageSize } = pagination(req);
     res.json(await listSent(userId(req), page, pageSize));
+  }),
+);
+
+const starSchema = z.object({ starred: z.boolean() });
+
+emailsRouter.patch(
+  "/:id/star",
+  asyncHandler<AuthedRequest>(async (req, res) => {
+    const parsed = starSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    // Scoped by owner, so nobody can flag someone else's email.
+    const { count } = await setStarred(userId(req), req.params.id, parsed.data.starred);
+    if (count === 0) {
+      res.status(404).json({ error: "email not found" });
+      return;
+    }
+    res.json({ starred: parsed.data.starred });
   }),
 );

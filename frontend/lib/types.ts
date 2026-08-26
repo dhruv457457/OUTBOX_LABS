@@ -15,6 +15,7 @@ export interface ScheduledEmailRow {
   status: EmailStatus;
   sentAt: string | null;
   previewUrl: string | null;
+  starred: boolean;
   sender: Sender;
 }
 
@@ -32,5 +33,11 @@ export interface UploadListResponse {
 export interface EmailAttachment {
   filename: string;
   contentType: string;
-  content: string; // base64
+  url: string;
+  bytes: number;
+}
+
+export interface ImproveDraftResponse {
+  subject: string | null;
+  bodyHtml: string;
 }

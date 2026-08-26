@@ -39,6 +39,9 @@ model ScheduledEmail {
   hourlyLimit  Int
   status       EmailStatus @default(SCHEDULED)
   batchId      String?
+  starred      Boolean     @default(false)
+  // [{ filename, contentType, url, bytes }] — files live in Cloudinary, the row only
+  // keeps the reference.
   attachments  Json?
   attempt      Int         @default(0)
   lastError    String?
