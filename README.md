@@ -137,6 +137,12 @@ secret — newer Supabase projects sign with rotatable ES256 keys, so there's no
 secret to distribute, and key rotation is handled for us. Every `/api/*` route except
 the health check goes through that middleware.
 
+Signing in with Google and with a password resolve to the same account: Supabase links
+identities that share a verified email address, so the token's `sub` — which every row
+is keyed on — stays the same either way. The verified part matters. An account created
+while "Confirm email" is on but never confirmed can neither sign in nor be linked, since
+linking to an unverified address would allow pre-account-takeover.
+
 ## Seeing it work
 
 Every send goes through Ethereal, which captures the message and returns a preview link
