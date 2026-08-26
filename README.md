@@ -10,7 +10,8 @@ queue (no cron), and manage everything from a Next.js dashboard.
   (Supabase), Ethereal for fake SMTP.
 - **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS v4, Supabase Auth
   (Google OAuth) for login, Tiptap for the rich-text composer.
-- **Infra**: Redis via Docker for local dev.
+- **Infra**: Redis via Docker for local dev, Cloudinary for attachment storage,
+  OpenRouter for the compose assistant.
 
 ## Running it locally
 
@@ -102,6 +103,15 @@ Two independent checks prevent double-sends:
   scheduled at once behaves — every job still gets a cheap delayed slot in Redis, and
   the rate limiter naturally spreads the actual sends out over time instead of erroring.
 
+### Compose assistant
+
+The magic-wand button in the composer sends the current draft to an LLM (OpenRouter,
+`openai/gpt-4o-mini` by default) and swaps in a tightened version — spelling, grammar and
+padding fixed, intent and merge tags left alone. It suggests a subject when the field is
+empty. The replacement runs through the editor's history, so Ctrl+Z brings the original
+back. Both the key and the model are env-driven, the endpoint has its own tighter rate
+limit, and the button simply disappears when `OPENROUTER_API_KEY` is unset.
+
 ### Senders and tenancy
 
 Every account is provisioned its own set of mailboxes (`DEFAULT_SENDERS`) the first time
@@ -148,8 +158,8 @@ remaining emails sit in `SCHEDULED` with their next attempt moved to the followi
 BullMQ delayed-job scheduling, configurable worker concurrency, per-sender min-delay and
 hourly rate limiting (Redis-backed, env-configurable, never drops jobs), two-layer
 idempotency, restart-persistence via BullMQ plus a reconciliation sweep, Supabase JWT
-auth middleware, CSV/txt recipient parsing, attachment support, and stored Ethereal
-preview links.
+auth middleware, CSV/txt recipient parsing, Cloudinary-backed attachments, an LLM
+draft assistant, and stored Ethereal preview links.
 
 **Frontend**: Google OAuth via Supabase Auth, dashboard with Scheduled/Sent tabs showing
 recipient, subject, timestamp and status, with loading / empty / error states, search,
@@ -157,7 +167,8 @@ status filtering and "load more" pagination; lists poll every 10s so emails visi
 from Scheduled to Sent. Compose is a Gmail-style modal (expandable to full screen) with
 sender selection, recipient chips, CSV upload with a parsed count, rich-text body,
 attachments with thumbnails, a date/time picker, and configurable delay and hourly
-limit. Toasts cover success and error paths throughout.
+limit, plus a one-click assistant that polishes the draft. Rows can be starred, which
+persists. Toasts cover success and error paths throughout.
 
 ## Assumptions & trade-offs
 
@@ -172,9 +183,10 @@ limit. Toasts cover success and error paths throughout.
   active state reliably — `queryCommandState("justifyLeft")` returns `true` even when
   nothing is aligned, so the button was permanently highlighted. Tiptap tracks real
   document state, so every toolbar button lights up only when it actually applies.
-- Attachments are stored base64 on the row. That is fine at this scale and keeps the
-  setup to two services, but it inflates the database and would move to object storage
-  (S3 or Supabase Storage) with only a reference on the row in production.
+- Attachments upload to Cloudinary as the user picks them, so the database and the job
+  payload only ever carry a URL, and nodemailer streams each file straight from storage
+  when the email goes out. Uploaded files aren't garbage-collected when an email is
+  deleted — a scheduled cleanup pass would be the next step.
 - The dashboard polls every 10 seconds rather than holding a connection open. It pauses
   on hidden tabs, which is enough for one operator; server-sent events would be the
   right answer for many concurrent users.

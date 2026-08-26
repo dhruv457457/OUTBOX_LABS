@@ -91,7 +91,7 @@ export function ComposePanel({ onClose, expanded, onToggleExpand }: Props) {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-medium">Compose New Email</span>
         <div className="flex items-center gap-3">
-          <AttachmentPicker value={attachments} onChange={setAttachments} />
+          <AttachmentPicker value={attachments} onChange={setAttachments} onNotice={toast} />
           <SendLaterPicker value={sendAt} onChange={setSendAt} />
           <button
             onClick={onToggleExpand}
@@ -148,7 +148,12 @@ export function ComposePanel({ onClose, expanded, onToggleExpand }: Props) {
           </label>
         </div>
 
-        <RichTextEditor onChange={setBodyHtml} />
+        <RichTextEditor
+          onChange={setBodyHtml}
+          subject={subject}
+          onSubjectChange={setSubject}
+          onNotice={toast}
+        />
 
         <AttachmentPreview value={attachments} onRemove={(i) => setAttachments(attachments.filter((_, j) => j !== i))} />
       </div>

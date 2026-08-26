@@ -51,7 +51,9 @@ export function EmailListsProvider({ children }: { children: ReactNode }) {
   // Mirror of the latest state, so timers and callbacks can read it without being
   // re-created on every change.
   const stateRef = useRef({ scheduled, sent });
-  stateRef.current = { scheduled, sent };
+  useEffect(() => {
+    stateRef.current = { scheduled, sent };
+  }, [scheduled, sent]);
 
   /** Reloads the first page, dropping any extra pages the user had loaded. */
   const reload = useCallback(

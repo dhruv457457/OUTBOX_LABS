@@ -7,12 +7,14 @@ import { requireAuth } from "./auth/middleware.js";
 import { emailsRouter } from "./routes/emails.routes.js";
 import { sendersRouter } from "./routes/senders.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
+import { aiRouter } from "./routes/ai.routes.js";
+import { attachmentsRouter } from "./routes/attachments.routes.js";
 
 const app = express();
 
 // Only the dashboard should be able to call this API from a browser.
 app.use(cors({ origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()) }));
-app.use(express.json({ limit: "12mb" })); // headroom for base64-encoded attachments
+app.use(express.json({ limit: "1mb" })); // attachments upload separately, so payloads stay small
 
 // A valid token shouldn't be a licence to hammer the API.
 const limiter = rateLimit({
@@ -23,11 +25,13 @@ const limiter = rateLimit({
   message: { error: "too many requests, slow down" },
 });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, aiEnabled: Boolean(env.OPENROUTER_API_KEY) }));
 
 app.use("/api/emails", limiter, requireAuth, emailsRouter);
 app.use("/api/senders", limiter, requireAuth, sendersRouter);
 app.use("/api/upload-list", limiter, requireAuth, uploadRouter);
+app.use("/api/ai", limiter, requireAuth, aiRouter);
+app.use("/api/attachments", limiter, requireAuth, attachmentsRouter);
 
 // Anything a route throws lands here rather than hanging the request.
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
