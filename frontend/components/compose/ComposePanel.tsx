@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { useEmailLists } from "@/hooks/useEmailLists";
+import { useAuth } from "@/hooks/useAuth";
 import { RecipientChips } from "./RecipientChips";
 import { SenderDropdown } from "./SenderDropdown";
 import { RichTextEditor } from "./RichTextEditor";
@@ -32,6 +33,9 @@ interface Props {
 export function ComposePanel({ onClose, expanded, onToggleExpand }: Props) {
   const toast = useToast();
   const { refresh } = useEmailLists();
+  const { user } = useAuth();
+  // Sign-offs should carry the person's name, not the mailbox label.
+  const signOffName = (user?.user_metadata?.full_name as string | undefined) ?? undefined;
   const [senders, setSenders] = useState<Sender[]>([]);
   const [senderId, setSenderId] = useState("");
   const [recipients, setRecipients] = useState<string[]>([]);
@@ -151,9 +155,15 @@ export function ComposePanel({ onClose, expanded, onToggleExpand }: Props) {
         <RichTextEditor
           onChange={setBodyHtml}
           subject={subject}
+          senderName={signOffName}
           onSubjectChange={setSubject}
           onNotice={toast}
         />
+
+        <p className="text-xs text-muted">
+          Use <code className="rounded bg-black/[0.06] px-1 py-0.5">{"{{firstName}}"}</code> anywhere in the
+          subject or body — it&apos;s replaced with each recipient&apos;s name as the email goes out.
+        </p>
 
         <AttachmentPreview value={attachments} onRemove={(i) => setAttachments(attachments.filter((_, j) => j !== i))} />
       </div>

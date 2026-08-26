@@ -103,14 +103,23 @@ Two independent checks prevent double-sends:
   scheduled at once behaves — every job still gets a cheap delayed slot in Redis, and
   the rate limiter naturally spreads the actual sends out over time instead of erroring.
 
-### Compose assistant
+### Compose assistant and merge tags
 
-The magic-wand button in the composer sends the current draft to an LLM (OpenRouter,
-`openai/gpt-4o-mini` by default) and swaps in a tightened version — spelling, grammar and
-padding fixed, intent and merge tags left alone. It suggests a subject when the field is
-empty. The replacement runs through the editor's history, so Ctrl+Z brings the original
-back. Both the key and the model are env-driven, the endpoint has its own tighter rate
-limit, and the button simply disappears when `OPENROUTER_API_KEY` is unset.
+The magic-wand button sends the current draft to an LLM (OpenRouter, `openai/gpt-4o-mini`
+by default) and swaps in a rewritten version: a greeting, short paragraphs, and a
+sign-off carrying the signed-in user's name. It rewrites the subject too, and fixes
+spelling and grammar without inventing facts or touching existing tags. The replacement
+runs through the editor's history, so Ctrl+Z brings the original back.
+
+Because one draft goes to a whole list, the greeting uses `{{firstName}}` rather than a
+literal name. The worker fills tags per recipient at send time, deriving the name from
+the address — `john.smith@…` becomes "John", while shared mailboxes like `support@…`
+fall back to "there" so the greeting still reads naturally. `{{name}}` and `{{email}}`
+work the same way, and the assistant deliberately keeps tags out of the subject, where
+that fallback would read badly.
+
+Both the key and model are env-driven, the endpoint carries its own tighter rate limit,
+and the button disappears when `OPENROUTER_API_KEY` is unset.
 
 ### Senders and tenancy
 

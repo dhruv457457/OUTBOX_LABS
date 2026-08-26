@@ -202,12 +202,14 @@ export function LinkButton({ editor }: { editor: Editor }) {
 export function ImproveButton({
   editor,
   subject,
+  senderName,
   onSubjectChange,
   onError,
   onDone,
 }: {
   editor: Editor;
   subject?: string;
+  senderName?: string;
   onSubjectChange?: (s: string) => void;
   onError: (message: string) => void;
   onDone?: () => void;
@@ -224,10 +226,11 @@ export function ImproveButton({
     try {
       const result = await apiPost<ImproveDraftResponse>("/api/ai/improve", {
         subject,
+        senderName,
         bodyHtml: editor.getHTML(),
       });
       editor.chain().focus().setContent(result.bodyHtml).run();
-      if (result.subject && !subject?.trim()) onSubjectChange?.(result.subject);
+      if (result.subject) onSubjectChange?.(result.subject);
       onDone?.();
     } catch (err) {
       onError((err as Error).message);

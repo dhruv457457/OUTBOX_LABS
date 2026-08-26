@@ -4,6 +4,7 @@ import { redis } from "../redis/client.js";
 import { sendEmail, type EmailAttachment } from "../mailer/etherealTransport.js";
 import { env } from "../config/env.js";
 import { EMAIL_QUEUE_NAME, type EmailJobData } from "./jobTypes.js";
+import { applyMergeTags } from "../utils/mergeTags.js";
 import {
   nextHourBoundary,
   releaseHourlySlot,
@@ -52,7 +53,14 @@ async function processEmailJob(job: Job<EmailJobData>, token?: string) {
 
   let previewUrl: string | false | undefined;
   try {
-    previewUrl = await sendEmail({ from: senderEmail, to: recipient, subject, html: bodyHtml, attachments });
+    previewUrl = await sendEmail({
+      from: senderEmail,
+      to: recipient,
+      // Tags are filled per recipient, so one draft greets a whole list by name.
+      subject: applyMergeTags(subject, recipient),
+      html: applyMergeTags(bodyHtml, recipient),
+      attachments,
+    });
   } catch (err) {
     await releaseHourlySlot(senderId);
     // Back to SCHEDULED so BullMQ's retry can re-claim it — without this the retry would

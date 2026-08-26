@@ -1,28 +1,42 @@
 import { env } from "../config/env.js";
 
-const SYSTEM_PROMPT = `You polish cold outreach emails.
+const SYSTEM_PROMPT = `You rewrite outreach emails so they read like a person wrote them.
 
-Given a draft, return an improved version that:
-- fixes spelling, grammar and punctuation
-- tightens rambling sentences and removes filler
-- keeps a warm, direct, human tone — never corporate filler or hype
-- preserves the writer's intent, facts, names and any links exactly
-- keeps it short; cold emails should be skimmable in under 15 seconds
+Return the draft restructured as:
+1. A greeting on its own line, always "Hi {{firstName}}," — the tag is filled in per
+   recipient at send time, so never replace it with a literal name.
+2. The message itself, in short paragraphs. One idea per paragraph, two or three
+   sentences at most.
+3. A sign-off on its own line ("Best," / "Thanks," / "Regards,") followed by the
+   sender's name on the next line.
 
-Rules:
-- Never invent facts, names, numbers, companies or links.
-- Never add placeholders like [Your Name] unless the draft already had them.
-- Keep any merge tags such as {{firstName}} untouched.
-- Body must be simple HTML using only <p>, <br>, <strong>, <em>, <u>, <ul>, <ol>, <li>, <a>, <blockquote>.
-- Do not wrap the output in markdown fences or <html>/<body> tags.`;
+Also improve the subject line: specific, under about eight words, no clickbait, no
+ALL CAPS, no exclamation marks. Never put a merge tag in the subject — recipients on
+shared mailboxes fall back to "there", which reads fine in "Hi there," but not in a
+subject line.
+
+While rewriting:
+- fix spelling, grammar and punctuation
+- cut filler and corporate padding; keep it skimmable in under 15 seconds
+- keep a warm, direct tone
+- preserve the writer's intent, facts, names, dates and links exactly
+- never invent facts, numbers, companies, links or commitments
+- keep any existing {{merge tags}} untouched
+
+Body must be simple HTML using only <p>, <br>, <strong>, <em>, <u>, <ul>, <ol>, <li>,
+<a>, <blockquote>. No markdown fences, no <html> or <body> wrapper.`;
 
 interface ImproveResult {
   subject: string | null;
   bodyHtml: string;
 }
 
-/** Asks the model to clean up a draft. Returns the improved subject and body. */
-export async function improveDraft(input: { subject?: string; bodyHtml: string }): Promise<ImproveResult> {
+/** Asks the model to restructure and clean up a draft. */
+export async function improveDraft(input: {
+  subject?: string;
+  bodyHtml: string;
+  senderName?: string;
+}): Promise<ImproveResult> {
   if (!env.OPENROUTER_API_KEY) {
     throw new Error("AI assist is not configured — set OPENROUTER_API_KEY");
   }
@@ -46,12 +60,13 @@ export async function improveDraft(input: { subject?: string; bodyHtml: string }
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Improve this email and reply with JSON shaped as {"subject": string, "bodyHtml": string}.
-If no subject is supplied, suggest a short one.
+            content: `Rewrite this email. Reply with JSON shaped as {"subject": string, "bodyHtml": string}.
 
-Subject: ${input.subject?.trim() || "(none)"}
+Sign off as: ${input.senderName?.trim() || "the sender (use a neutral sign-off with no name)"}
 
-Body HTML:
+Current subject: ${input.subject?.trim() || "(none — write one)"}
+
+Current body:
 ${input.bodyHtml}`,
           },
         ],

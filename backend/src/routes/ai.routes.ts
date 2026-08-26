@@ -10,6 +10,7 @@ export const aiRouter = Router();
 const schema = z.object({
   subject: z.string().max(300).optional(),
   bodyHtml: z.string().min(1).max(20_000),
+  senderName: z.string().max(120).optional(),
 });
 
 // Model calls cost money and take seconds, so these get a tighter budget than the

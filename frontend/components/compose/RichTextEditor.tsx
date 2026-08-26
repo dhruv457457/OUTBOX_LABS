@@ -50,11 +50,12 @@ interface Props {
   onChange: (html: string) => void;
   /** Passed through to the assistant so it can improve the subject line too. */
   subject?: string;
+  senderName?: string;
   onSubjectChange?: (subject: string) => void;
   onNotice?: (message: string, tone?: "success" | "error") => void;
 }
 
-export function RichTextEditor({ onChange, subject, onSubjectChange, onNotice }: Props) {
+export function RichTextEditor({ onChange, subject, senderName, onSubjectChange, onNotice }: Props) {
   const editor = useEditor({
     immediatelyRender: false, // avoids an SSR hydration mismatch in the app router
     extensions: [
@@ -97,6 +98,7 @@ export function RichTextEditor({ onChange, subject, onSubjectChange, onNotice }:
         <ImproveButton
           editor={editor}
           subject={subject}
+          senderName={senderName}
           onSubjectChange={onSubjectChange}
           onError={(message) => onNotice?.(message, "error")}
           onDone={() => {
