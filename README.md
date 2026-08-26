@@ -185,8 +185,10 @@ persists. Toasts cover success and error paths throughout.
   header" but the Figma places name, email and avatar in the left sidebar, and the same
   brief says to follow the Figma closely. All four required elements (name, email,
   avatar, logout) are present — the Figma's placement won.
-- Email/password login is wired via Supabase Auth but is a secondary path — Google
-  OAuth is the required "real" auth flow per the assignment.
+- Email/password sign-in and sign-up both work through Supabase Auth, including the
+  confirmation-email case. Google OAuth remains the primary path, since that's what the
+  assignment requires. Password reset isn't built — it needs an email template and a
+  reset route, and no requirement asked for it.
 - The rich-text editor is Tiptap (ProseMirror). It started as a `contentEditable` +
   `document.execCommand` toolbar, but `execCommand` is deprecated and can't report
   active state reliably — `queryCommandState("justifyLeft")` returns `true` even when
