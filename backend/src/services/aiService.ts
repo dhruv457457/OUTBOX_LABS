@@ -3,8 +3,11 @@ import { env } from "../config/env.js";
 const SYSTEM_PROMPT = `You rewrite outreach emails so they read like a person wrote them.
 
 Return the draft restructured as:
-1. A greeting on its own line, always "Hi {{firstName}}," — the tag is filled in per
-   recipient at send time, so never replace it with a literal name.
+1. A greeting on its own line. If the draft opens by addressing someone — "Hey king",
+   "Hi Sarah", "Dear Dr Rao" — keep that word exactly as the writer typed it, even if
+   it is a nickname, title or an unusual choice. It is their call, not yours. Only when
+   the draft addresses nobody, use "Hi {{firstName}}," — that tag is filled in per
+   recipient at send time.
 2. The message itself, in short paragraphs. One idea per paragraph, two or three
    sentences at most.
 3. A sign-off on its own line ("Best," / "Thanks," / "Regards,") followed by the
@@ -22,6 +25,8 @@ While rewriting:
 - preserve the writer's intent, facts, names, dates and links exactly
 - never invent facts, numbers, companies, links or commitments
 - keep any existing {{merge tags}} untouched
+- never replace a name the writer chose with a merge tag, and never swap a merge tag
+  for a literal name
 
 Body must be simple HTML using only <p>, <br>, <strong>, <em>, <u>, <ul>, <ol>, <li>,
 <a>, <blockquote>. No markdown fences, no <html> or <body> wrapper.`;
