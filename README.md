@@ -36,11 +36,21 @@ The tables live in a dedicated `scheduler` Postgres schema rather than `public`,
 app can share a Supabase project with something else without either one touching the
 other's tables.
 
-In a second terminal, start the queue worker as its own process (this is what makes
-restart-survival possible — kill/restart the worker independently of the API):
+In a second terminal — also from `backend/` — start the queue worker as its own
+process. This is what makes restart-survival possible: the worker can be killed and
+restarted independently of the API.
 
 ```bash
 npm run dev:worker
+```
+
+Every backend command in this README runs from `backend/`. The repository root only
+carries workspace wiring, so `npm run reset` there fails with `Missing script`.
+
+If the API exits with `EADDRINUSE ... :4000`, an earlier run is still holding the port:
+
+```bash
+npx kill-port 4000
 ```
 
 ### 3. Frontend
@@ -192,12 +202,18 @@ body, formatting and attachments included.
 
 To watch the rate limiter under load, schedule a burst against a deliberately low limit:
 
+Run these from `backend/`. Anything taking arguments goes through `npx tsx` directly —
+npm swallows the arguments after `--` when the package is a workspace member:
+
 ```bash
-npm run loadtest -- 1000 50 0  # 1000 emails against a 50/hour limit
-npm run status                 # status counts, next send times, Redis counters
-npm run loadtest:clear         # remove the test rows again
-npm run reset                  # clear everything, including the queue
+npx tsx scripts/loadtest.ts 1000 50 0   # 1000 emails against a 50/hour limit
+npm run status                          # counts, next send times, Redis counters
+npm run loadtest:clear                  # remove just the load-test rows
+npx tsx scripts/reset.ts --all          # clear everything, including the queue
 ```
+
+`reset` needs a target — either a user id or `--all` — so it can't wipe real data by
+accident.
 
 Running that 1000-email burst gives exactly 50 sent, 950 left `SCHEDULED` with their
 next attempt moved to the following hour, and nothing in `FAILED`.

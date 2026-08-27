@@ -3,18 +3,20 @@ import { prisma } from "../src/db/client.js";
 import { emailQueue } from "../src/queue/emailQueue.js";
 import { redis } from "../src/redis/client.js";
 
-// Clears scheduled emails and the queue state behind them.
-//   npm run reset -- <userId>   clears just that account
-//   npm run reset -- --all      clears every account
-// Requires one of the two, because this used to wipe real data by default.
+// Clears scheduled emails and the queue state behind them. Requires an explicit
+// target, because a bare run used to wipe every account.
+//   npx tsx scripts/reset.ts <userId>   clears just that account
+//   npx tsx scripts/reset.ts --all      clears every account
+// Called through npx rather than npm: npm drops arguments after `--` for a package
+// that is a workspace member.
 const arg = process.argv[2];
 
 async function main() {
   if (!arg) {
     console.error(
       "refusing to run without a target.\n" +
-        "  npm run reset -- <userId>   clear one account\n" +
-        "  npm run reset -- --all      clear everything",
+        "  npx tsx scripts/reset.ts <userId>   clear one account\n" +
+        "  npx tsx scripts/reset.ts --all      clear everything",
     );
     process.exitCode = 1;
     return;
