@@ -4,6 +4,35 @@ A full-stack email scheduler built for the Outbox Labs / ReachInbox SDE internsh
 assignment: schedule emails via API, deliver them through a persistent BullMQ+Redis
 queue (no cron), and manage everything from a Next.js dashboard.
 
+- **Live dashboard** — https://outbox-labs-frontend-bay.vercel.app/login
+- **Demo video** — https://www.youtube.com/watch?v=AjfkaPkFWV0
+
+The API runs on Render's free plan, which idles the process out after about fifteen
+minutes. The first request after a quiet spell takes a few seconds while it wakes.
+
+## Architecture at a glance
+
+```mermaid
+flowchart TB
+    UI["Next.js dashboard<br/>Google OAuth"]
+    API["Express API<br/>verify token · scope by user"]
+    DB[("PostgreSQL — source of truth<br/>Supabase")]
+    Q["BullMQ on Redis<br/>timing only · no cron"]
+    W["Worker<br/>concurrency · rate limits"]
+    SMTP["Ethereal SMTP<br/>preview link stored"]
+
+    UI -- "JWT" --> API
+    API -- "write row" --> DB
+    API -- "enqueue delayed job" --> Q
+    Q -- "due job" --> W
+    W -- "send" --> SMTP
+    W -. "status → SENT" .-> DB
+    DB -. "rebuilds queue on boot" .-> W
+```
+
+Postgres owns the truth; Redis only owns the timing. Wipe Redis and the worker rebuilds
+the queue from Postgres on its next boot, which is what stops a restart losing mail.
+
 ## Stack
 
 - **Backend**: Express + TypeScript, BullMQ (Redis-backed queue), Prisma → PostgreSQL
