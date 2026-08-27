@@ -8,7 +8,8 @@ queue (no cron), and manage everything from a Next.js dashboard.
 - **Demo video** — https://www.youtube.com/watch?v=AjfkaPkFWV0
 
 The API runs on Render's free plan, which idles the process out after about fifteen
-minutes. The first request after a quiet spell takes a few seconds while it wakes.
+minutes. Opening the dashboard cold shows a progress bar while the server wakes — it
+takes roughly a minute, and nothing is lost in the meantime.
 
 ## Architecture at a glance
 
